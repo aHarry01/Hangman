@@ -3,6 +3,7 @@ import PIL.Image, PIL.ImageTk
 import time
 import random
 
+#screen class to handle the GUI 
 class Screen():
     def __init__(self):
         self.canvas = Canvas(root, height=600, width=600, relief=RAISED, bg="white")
@@ -36,7 +37,7 @@ class Screen():
 
     #if numPlayers = 2, the players' names and the word chosen by player 1 must be passed into this function
     #if numPlayers = 1, the function will call generateRandomWord() to choose a word automatically
-    def setupMainGameScreen(self, numPlayers,player1Name = "", player2Name = "", word = "",tempCanvas=None):
+    def setupMainGameScreen(self, numPlayers,player1Name = "", player2Name = "", word = ""):
         self.numPlayers = numPlayers
         self.canvas.delete(self.howManyPrompt)
         self.canvas.delete(self.player1Button)
@@ -49,8 +50,9 @@ class Screen():
             self.player1 = player1Name
             self.player2 = player2Name
             self.word = word
-            tempCanvas.destroy()
-
+            #delete GUI objects associated with getting the 2 player's names & word to guess
+            for obj in self.playerNamesComponents:
+                self.canvas.delete(obj)
         
         self.missed = self.canvas.create_text(280, 125, font = ('Arial', 14), text = 'Missed Letters:',anchor=NW)
         self.canvas.create_text(300,450, font = ('Arial', 14), text = 'Guess a character', tag = 'prompt')
@@ -73,28 +75,24 @@ class Screen():
         self.canvas.delete(self.player1Button)
         self.canvas.delete(self.player2Button)
 
-        tempCanvas = Canvas(root, height=350, width=350, relief=RAISED, bg="white", highlightthickness = 0) #canvas just for the stuff to get player names, easy to delete everything at once this way
-        tempCanvas.place(x=250,y=150)
-        root.lift(tempCanvas) #make absolute sure that tempCanvas is on top & visible
-        
-        entryPlayerOneName = Entry(root, bg = 'light grey',width = 20)
-        entryPlayerTwoName = Entry(root, bg = "light grey",width = 20)
+        self.playerNamesComponents = [] #holds all the GUI objects on this temporary screen, makes it easier to delete later
+
+        entryPlayerOne = Entry(root, bg = 'light grey',width = 20)
+        entryPlayerTwo = Entry(root, bg = "light grey",width = 20)
         validationCmd = root.register(wordValidation)
         entryWordToGuess = Entry(root, bg = "light grey",width = 20, validate="key", validatecommand=(validationCmd, '%P'))
 
-        tempCanvas.create_window(250, 25,window=entryPlayerOneName)
-        tempCanvas.create_window(250, 150,window=entryPlayerTwoName)
-        tempCanvas.create_window(250, 275,window=entryWordToGuess)
+        self.playerNamesComponents.append(self.canvas.create_window(500, 175,window=entryPlayerOne))
+        self.playerNamesComponents.append(self.canvas.create_window(500, 300,window=entryPlayerTwo))
+        self.playerNamesComponents.append(self.canvas.create_window(500, 425,window=entryWordToGuess))
 
-        tempCanvas.create_text(1, 25, font = ('Arial', 12), text = 'Player 1 Name:', anchor=W)
-        tempCanvas.create_text(1, 150, font = ('Arial', 12), text = 'Player 2 Name:', anchor=W)
-        tempCanvas.create_text(1, 275, font = ('Arial', 12), text = 'Word for P2 to Guess:', anchor=W)
-
+        self.playerNamesComponents.append(self.canvas.create_text(251, 175, font = ('Arial', 12), text = 'Player 1 Name:', anchor=W))
+        self.playerNamesComponents.append(self.canvas.create_text(251, 300, font = ('Arial', 12), text = 'Player 2 Name:', anchor=W))
+        self.playerNamesComponents.append(self.canvas.create_text(251, 425, font = ('Arial', 12), text = 'Word for P2 to Guess:', anchor=W))
 
         enterButton = Button(root,text = "Enter",relief=RAISED,bg = 'grey80', font=('Arial',13),width = 6,
-                             command=lambda:self.setupMainGameScreen(2,entryPlayerOneName.get(), entryPlayerTwoName.get(), entryWordToGuess.get().lower(), tempCanvas))
-        tempCanvas.create_window(175, 325, window=enterButton)
-
+                             command=lambda:self.setupMainGameScreen(2,entryPlayerOne.get(), entryPlayerTwo.get(), entryWordToGuess.get().lower()))
+        self.playerNamesComponents.append(self.canvas.create_window(500, 475, window=enterButton))
 
     #displays the empty lines of the word
     def displayLines(self):
@@ -140,7 +138,9 @@ class Screen():
     #shows an error message on the screen for duration seconds, then erases it
     def dispErrorMessage(self, msg, duration=1):
         errorMessage = self.canvas.create_text(300,475, font = ('Arial', 14), text = msg)
+        self.canvas.tag_raise(errorMessage)
         root.update_idletasks()
+        self.canvas.tag_raise(errorMessage)
         time.sleep(duration)
         self.entry.delete(0,END)
         self.canvas.delete(errorMessage)
@@ -191,6 +191,7 @@ class Letter():
         middle = (self.x1 + self.x2)/2
         screen.canvas.create_text(middle,self.y, text = self.char, anchor=S, font=('Arial', 20))
 
+#check if the letter guess the player just made was correct, update game appropriately
 def checkGuess():
     guessed = screen.entry.get().rstrip().lower()
     if len(guessed) > 1:
